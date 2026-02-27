@@ -94,11 +94,14 @@ export class NovelCrawler {
       }
     } catch (error) {
       console.error('爬取过程中发生错误:', error);
+      // 如果是网络错误，尝试重置HTTP客户端
+      if (error.toString().includes('network') || error.toString().includes('timeout')) {
+        console.log('检测到网络错误，尝试重置连接...');
+        await this.httpClient.reset();
+        // 可以选择重新尝试当前页面
+      }
       onProgress?.(0, 0, `爬取失败: ${error}`);
       return false;
-    } finally {
-      // 清理资源
-      this.httpClient.destroy();
     }
   }
 }
