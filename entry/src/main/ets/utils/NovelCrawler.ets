@@ -1,4 +1,8 @@
 import { fileIo as fs } from '@kit.CoreFileKit';
+import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { wantAgent, WantAgent } from '@kit.AbilityKit';
+import common from '@ohos.app.ability.common';
 
 /*
  * 小说爬虫核心类
@@ -11,10 +15,85 @@ import { FileManager } from './FileManager';
 export class NovelCrawler {
   private httpClient: HttpClient;
   private fileManager: FileManager;
+  private context: common.UIAbilityContext | undefined = undefined;
+  private wantAgentObj: WantAgent | null = null;
+  private isBackgroundTaskRunning: boolean = false;
 
-  constructor() {
+  constructor(context?: common.UIAbilityContext) {
     this.httpClient = new HttpClient();
     this.fileManager = new FileManager();
+    this.context = context;
+  }
+
+  /**
+   * 初始化长时任务相关组件
+   */
+  private async initBackgroundTask(): Promise<boolean> {
+    if (!this.context) {
+      console.warn('上下文未提供，无法初始化长时任务');
+      return false;
+    }
+
+    try {
+      // 创建WantAgent信息
+      let wantAgentInfo: wantAgent.WantAgentInfo = {
+        wants: [
+          {
+            bundleName: "com.example.novelbot",
+            abilityName: "EntryAbility"
+          }
+        ],
+        actionType: wantAgent.OperationType.START_ABILITY,
+        requestCode: 0,
+        actionFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
+      };
+
+      // 获取WantAgent对象
+      this.wantAgentObj = await wantAgent.getWantAgent(wantAgentInfo);
+      console.info('长时任务初始化成功');
+      return true;
+    } catch (error) {
+      console.error(`长时任务初始化失败: ${(error as BusinessError).code}, ${(error as BusinessError).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * 申请长时任务
+   */
+  private async startBackgroundTask(): Promise<boolean> {
+    if (!this.context || !this.wantAgentObj || this.isBackgroundTaskRunning) {
+      return false;
+    }
+
+    try {
+      // 使用dataTransfer类型确保文件传输不会被中断
+      let list: Array<string> = ["dataTransfer"];
+      const res = await backgroundTaskManager.startBackgroundRunning(this.context, list, this.wantAgentObj);
+      console.info(`长时任务申请成功, notificationId: ${res.notificationId}`);
+      this.isBackgroundTaskRunning = true;
+      return true;
+    } catch (error) {
+      console.error(`长时任务申请失败: ${(error as BusinessError).code}, ${(error as BusinessError).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * 取消长时任务
+   */
+  private async stopBackgroundTask(): Promise<void> {
+    if (!this.context || !this.isBackgroundTaskRunning) {
+      return;
+    }
+
+    try {
+      await backgroundTaskManager.stopBackgroundRunning(this.context);
+      console.info('长时任务取消成功');
+      this.isBackgroundTaskRunning = false;
+    } catch (error) {
+      console.error(`长时任务取消失败: ${(error as BusinessError).code}, ${(error as BusinessError).message}`);
+    }
   }
 
   /**
@@ -30,12 +109,26 @@ export class NovelCrawler {
     baseUrl: string,
     startPage: number,
     endPage: number,
-    outputFileName: string,
     onProgress?: (current: number, total: number, message: string) => void
   ): Promise<boolean> {
     try {
       const totalPages = endPage - startPage + 1;
-      let novelContent = '';
+
+      // 初始化长时任务
+      const initSuccess = await this.initBackgroundTask();
+      if (!initSuccess) {
+        console.warn('长时任务初始化失败，将继续执行但可能被系统中断');
+      }
+
+      // 在整个爬取过程开始时就申请长时任务
+      onProgress?.(0, totalPages, '正在申请长时任务权限...');
+      const taskStarted = await this.startBackgroundTask();
+      if (taskStarted) {
+        console.log('长时任务已启动，可以在后台持续运行');
+      } else {
+        console.warn('长时任务启动失败，应用可能在后台被系统限制');
+      }
+
       await this.fileManager.setup();
 
       console.log(`开始爬取小说，共 ${totalPages} 页`);
@@ -80,18 +173,10 @@ export class NovelCrawler {
         }
       }
 
-      // 保存小说内容
-      onProgress?.(totalPages, totalPages, '正在保存文件...');
-      const success = await this.fileManager.exportToDownload(outputFileName);
-      if (success) {
-        console.log(`爬取完成！文件已保存至: ${outputFileName}`);
-        onProgress?.(totalPages, totalPages, `爬取完成！文件已保存至: ${outputFileName}`);
-        return true;
-      } else {
-        console.error('保存文件失败');
-        onProgress?.(totalPages, totalPages, '保存文件失败');
-        return false;
-      }
+      // 爬取完成，但不立即保存文件
+      console.log(`爬取完成！共处理 ${totalPages} 页`);
+      onProgress?.(totalPages, totalPages, `爬取完成！共处理 ${totalPages} 页`);
+      return true;
     } catch (error) {
       console.error('爬取过程中发生错误:', error);
       // 如果是网络错误，尝试重置HTTP客户端
@@ -102,6 +187,37 @@ export class NovelCrawler {
       }
       onProgress?.(0, 0, `爬取失败: ${error}`);
       return false;
+    } finally {
+      await this.stopBackgroundTask();
     }
+  }
+
+  /**
+   * 保存已爬取的内容到设备
+   * @param outputFileName 输出文件名
+   * @returns Promise<boolean> 是否保存成功
+   */
+  async saveCrawledContent(outputFileName: string): Promise<boolean> {
+    try {
+      // 确保文件管理器已初始化
+      if (!this.fileManager.getNovelFile()) {
+        await this.fileManager.setup();
+      }
+      
+      // 直接保存到 Downloads 目录
+      const success = await this.fileManager.exportToDownload(outputFileName);
+      return success;
+    } catch (error) {
+      console.error('保存爬取内容失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取文件管理器实例
+   * @returns FileManager 文件管理器实例
+   */
+  getFileManager(): FileManager {
+    return this.fileManager;
   }
 }

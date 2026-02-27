@@ -1,4 +1,5 @@
 import { NovelCrawler } from '../utils/NovelCrawler';
+import common from '@ohos.app.ability.common';
 
 @Entry
 @Component
@@ -11,11 +12,15 @@ struct Index {
   @State isRunning: boolean = false;
   @State progress: number = 0;
   @State savedNovels: string[] = [];
+  @State crawlCompleted: boolean = false;
   private novelCrawler: NovelCrawler | null = null;
+  private context: common.UIAbilityContext | undefined = undefined;
 
   private getNovelCrawler(): NovelCrawler {
     if (!this.novelCrawler) {
-      this.novelCrawler = new NovelCrawler();
+      // 获取UIAbility上下文
+      this.context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      this.novelCrawler = new NovelCrawler(this.context);
     }
     return this.novelCrawler;
   }
@@ -61,6 +66,10 @@ struct Index {
       this.outputFileName = '小说.txt';
     }
 
+    if (!this.outputFileName.endsWith('.txt')) {
+      this.outputFileName += '.txt';
+    }
+
     this.isRunning = true;
     this.progress = 0;
     this.statusMessage = '开始爬取...';
@@ -70,7 +79,6 @@ struct Index {
         this.baseUrl,
         startNum,
         endNum,
-        this.outputFileName,
         (current: number, total: number, message: string) => {
           this.progress = Math.round((current / total) * 100);
           this.statusMessage = message;
@@ -78,7 +86,8 @@ struct Index {
       );
 
       if (success) {
-        this.statusMessage = '爬取完成！';
+        this.statusMessage = '爬取完成！点击下方保存按钮可将文件保存到设备';
+        this.crawlCompleted = true;
       } else {
         this.statusMessage = '爬取失败，请检查网络连接和URL格式';
       }
@@ -87,6 +96,28 @@ struct Index {
     } finally {
       this.isRunning = false;
       this.progress = 100;
+    }
+  }
+
+  // 保存文件到设备
+  async saveToFile() {
+    if (!this.crawlCompleted || !this.outputFileName) {
+      this.statusMessage = '请先完成爬取任务';
+      return;
+    }
+
+    this.statusMessage = '正在保存文件...';
+
+    try {
+      const success = await this.getNovelCrawler().saveCrawledContent(this.outputFileName);
+
+      if (success) {
+        this.statusMessage = `文件已成功保存至 Downloads/NovelBot/${this.outputFileName}`;
+      } else {
+        this.statusMessage = '保存文件失败，请重试';
+      }
+    } catch (error) {
+      this.statusMessage = `保存失败: ${error}`;
     }
   }
 
@@ -143,10 +174,7 @@ struct Index {
             .alignSelf(ItemAlign.Start)
           TextInput({ text: this.outputFileName })
             .onChange((value: string) => {
-              this.outputFileName = value || '小说.txt';
-              if (!this.outputFileName.endsWith('.txt')) {
-                this.outputFileName += '.txt';
-              }
+              this.outputFileName = value;
             })
             .width('90%')
         }
@@ -174,6 +202,17 @@ struct Index {
           .onClick(() => {
             this.startCrawling();
           })
+
+        // 保存文件按钮（仅在爬取完成后显示）
+        if (this.crawlCompleted) {
+          Button('保存文件到设备')
+            .width('80%')
+            .height(50)
+            .backgroundColor('#34C759')
+            .onClick(() => {
+              this.saveToFile();
+            })
+        }
       }
       .width('100%')
       .padding({ left: 20, right: 20 })

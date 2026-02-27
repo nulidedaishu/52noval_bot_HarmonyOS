@@ -44,5 +44,7 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    // 应用进入后台时的日志记录
+    hilog.info(DOMAIN, 'background', '应用已进入后台，长时任务应继续运行');
   }
 }

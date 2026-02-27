@@ -13,6 +13,12 @@
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "usedScene": {
+          "when": "inuse"
+        }
       }
     ],
     "abilities": [
@@ -34,7 +40,10 @@
               "ohos.want.action.home"
             ]
           }
-        ]
+        ],
+        "backgroundModes": [
+          "dataTransfer"
+        ],
       }
     ],
     "extensionAbilities": [
