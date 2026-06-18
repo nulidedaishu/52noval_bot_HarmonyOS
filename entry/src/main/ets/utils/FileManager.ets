@@ -31,7 +31,25 @@ export class FileManager {
    * 初始化文件。
    */
   async setup() {
-    this.novelFile = await fs.open(this.novelFilePath, Constants.NOVEL_FILE_ACCESS_MODE);
+    try {
+      this.novelFile = await fs.open(this.novelFilePath, Constants.NOVEL_FILE_ACCESS_MODE);
+    } catch (error) {
+      // TODO: Implement error handling.
+    }
+  }
+
+  /**
+   * 检查沙箱文件是否存在且有内容
+   * @returns Promise<boolean> 是否有内容
+   */
+  async hasContent(): Promise<boolean> {
+    try {
+      await fs.access(this.novelFilePath);
+      const stat = await fs.stat(this.novelFilePath);
+      return stat.size > 0;
+    } catch {
+      return false;
+    }
   }
 
   /**

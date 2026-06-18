@@ -199,11 +199,13 @@ export class NovelCrawler {
    */
   async saveCrawledContent(outputFileName: string): Promise<boolean> {
     try {
-      // 确保文件管理器已初始化
-      if (!this.fileManager.getNovelFile()) {
-        await this.fileManager.setup();
+      // 检查沙箱文件是否有内容（不调 setup() 避免 TRUNC 清空已有数据）
+      const hasContent = await this.fileManager.hasContent();
+      if (!hasContent) {
+        console.warn('沙箱文件中没有可保存的内容');
+        return false;
       }
-      
+
       // 直接保存到 Downloads 目录
       const success = await this.fileManager.exportToDownload(outputFileName);
       return success;

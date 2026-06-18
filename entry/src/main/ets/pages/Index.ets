@@ -12,7 +12,6 @@ struct Index {
   @State isRunning: boolean = false;
   @State progress: number = 0;
   @State savedNovels: string[] = [];
-  @State crawlCompleted: boolean = false;
   private novelCrawler: NovelCrawler | null = null;
   private context: common.UIAbilityContext | undefined = undefined;
 
@@ -86,8 +85,7 @@ struct Index {
       );
 
       if (success) {
-        this.statusMessage = '爬取完成！点击下方保存按钮可将文件保存到设备';
-        this.crawlCompleted = true;
+        this.statusMessage = '爬取完成！请点击下方保存按钮将文件保存到设备';
       } else {
         this.statusMessage = '爬取失败，请检查网络连接和URL格式';
       }
@@ -101,9 +99,12 @@ struct Index {
 
   // 保存文件到设备
   async saveToFile() {
-    if (!this.crawlCompleted || !this.outputFileName) {
-      this.statusMessage = '请先完成爬取任务';
-      return;
+    if (!this.outputFileName) {
+      this.outputFileName = '小说.txt';
+    }
+
+    if (!this.outputFileName.endsWith('.txt')) {
+      this.outputFileName += '.txt';
     }
 
     this.statusMessage = '正在保存文件...';
@@ -112,9 +113,9 @@ struct Index {
       const success = await this.getNovelCrawler().saveCrawledContent(this.outputFileName);
 
       if (success) {
-        this.statusMessage = `文件已成功保存至 Downloads/NovelBot/${this.outputFileName}`;
+        this.statusMessage = `文件已成功保存至 Downloads/你的应用包名/${this.outputFileName}`;
       } else {
-        this.statusMessage = '保存文件失败，请重试';
+        this.statusMessage = '保存失败：暂无已爬取的内容，请先开始爬取';
       }
     } catch (error) {
       this.statusMessage = `保存失败: ${error}`;
@@ -135,12 +136,26 @@ struct Index {
           Text('基础URL:')
             .fontSize(16)
             .alignSelf(ItemAlign.Start)
-          TextInput({})
-            .onChange((value: string) => {
-              this.baseUrl = value;
-              this.autoConvertUrl();
-            })
-            .width('90%')
+          Stack({ alignContent: Alignment.End }) {
+            TextInput({ text: this.baseUrl })
+              .onChange((value: string) => {
+                this.baseUrl = value;
+                this.autoConvertUrl();
+              })
+              .padding({ right: 30 })
+            if (this.baseUrl.length > 0) {
+              Text('✕')
+                .fontSize(16)
+                .fontColor('#999')
+                .width(30)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.baseUrl = '';
+                  this.endPage = '';
+                })
+            }
+          }
+          .width('90%')
         }
 
         // 起始页码
@@ -148,11 +163,24 @@ struct Index {
           Text('起始页码:')
             .fontSize(16)
             .alignSelf(ItemAlign.Start)
-          TextInput({ text: this.startPage })
-            .onChange((value: string) => {
-              this.startPage = value;
-            })
-            .width('90%')
+          Stack({ alignContent: Alignment.End }) {
+            TextInput({ text: this.startPage })
+              .onChange((value: string) => {
+                this.startPage = value;
+              })
+              .padding({ right: 30 })
+            if (this.startPage.length > 0) {
+              Text('✕')
+                .fontSize(16)
+                .fontColor('#999')
+                .width(30)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.startPage = '';
+                })
+            }
+          }
+          .width('90%')
         }
 
         // 结束页码
@@ -160,11 +188,24 @@ struct Index {
           Text('结束页码:')
             .fontSize(16)
             .alignSelf(ItemAlign.Start)
-          TextInput({ text: this.endPage })
-            .onChange((value: string) => {
-              this.endPage = value;
-            })
-            .width('90%')
+          Stack({ alignContent: Alignment.End }) {
+            TextInput({ text: this.endPage })
+              .onChange((value: string) => {
+                this.endPage = value;
+              })
+              .padding({ right: 30 })
+            if (this.endPage.length > 0) {
+              Text('✕')
+                .fontSize(16)
+                .fontColor('#999')
+                .width(30)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.endPage = '';
+                })
+            }
+          }
+          .width('90%')
         }
 
         // 文件名输入
@@ -172,11 +213,24 @@ struct Index {
           Text('输出文件名:')
             .fontSize(16)
             .alignSelf(ItemAlign.Start)
-          TextInput({ text: this.outputFileName })
-            .onChange((value: string) => {
-              this.outputFileName = value;
-            })
-            .width('90%')
+          Stack({ alignContent: Alignment.End }) {
+            TextInput({ text: this.outputFileName })
+              .onChange((value: string) => {
+                this.outputFileName = value;
+              })
+              .padding({ right: 30 })
+            if (this.outputFileName.length > 0) {
+              Text('✕')
+                .fontSize(16)
+                .fontColor('#999')
+                .width(30)
+                .textAlign(TextAlign.Center)
+                .onClick(() => {
+                  this.outputFileName = '';
+                })
+            }
+          }
+          .width('90%')
         }
 
         // 状态显示
@@ -203,16 +257,27 @@ struct Index {
             this.startCrawling();
           })
 
-        // 保存文件按钮（仅在爬取完成后显示）
-        if (this.crawlCompleted) {
-          Button('保存文件到设备')
-            .width('80%')
-            .height(50)
-            .backgroundColor('#34C759')
-            .onClick(() => {
-              this.saveToFile();
-            })
-        }
+        // 管理沙箱文件按钮
+        Button('📁 管理沙箱文件')
+          .width('80%')
+          .height(45)
+          .backgroundColor('#5856D6')
+          .onClick(() => {
+            this.getUIContext().getRouter().pushUrl({
+              url: 'pages/SandboxFileManagementPage'
+            }).catch((err: Error) => {
+              this.statusMessage = `页面跳转失败: ${err.message}`;
+            });
+          })
+
+        // 保存文件按钮
+        Button('保存文件到设备')
+          .width('80%')
+          .height(50)
+          .backgroundColor('#34C759')
+          .onClick(() => {
+            this.saveToFile();
+          })
       }
       .width('100%')
       .padding({ left: 20, right: 20 })
