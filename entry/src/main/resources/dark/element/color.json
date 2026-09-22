@@ -3,6 +3,26 @@
     {
       "name": "start_window_background",
       "value": "#000000"
+    },
+    {
+      "name": "page_background",
+      "value": "#111111"
+    },
+    {
+      "name": "surface",
+      "value": "#1E1E1E"
+    },
+    {
+      "name": "surface_subtle",
+      "value": "#2C2C2C"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#B3B3B3"
+    },
+    {
+      "name": "text_hint",
+      "value": "#8C8C8C"
     }
   ]
 }

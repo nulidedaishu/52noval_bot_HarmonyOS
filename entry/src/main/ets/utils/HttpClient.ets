@@ -58,7 +58,6 @@ export class HttpClient {
       'User-Agent': string;
       'Accept': string;
       'Accept-Language': string;
-      'Accept-Encoding'?: string;
       'Connection'?: string;
     }
 
@@ -66,7 +65,9 @@ export class HttpClient {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-      'Accept-Encoding': 'gzip, deflate',
+      // 不要手动发送 Accept-Encoding: 新版 CDN 会据此返回 gzip,
+      // 而 http 栈对手动声明的 gzip 不一定自动解压,会导致拿到二进制乱码。
+      // 不发送时服务器返回明文(已验证)。
       'Connection': 'close' // 改为close避免连接保持
     };
 

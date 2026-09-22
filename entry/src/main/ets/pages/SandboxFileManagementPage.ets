@@ -122,6 +122,15 @@ struct SandboxFileManagementPage {
     }
   }
 
+  // 全选/取消全选
+  toggleSelectAll() {
+    if (this.selectedFiles.length === this.files.length) {
+      this.selectedFiles = [];
+    } else {
+      this.selectedFiles = this.files.map((f: FileInfo) => f.name);
+    }
+  }
+
   // 批量导出选中的文件
   async batchExport() {
     if (this.selectedFiles.length === 0) {
@@ -191,6 +200,16 @@ struct SandboxFileManagementPage {
           .flexGrow(1)
           .textAlign(TextAlign.Center)
         
+        Button(this.selectedFiles.length === this.files.length && this.files.length > 0 ? '取消' : '全选')
+          .width(60)
+          .height(40)
+          .fontSize(13)
+          .backgroundColor('#8E8E93')
+          .enabled(this.files.length > 0)
+          .onClick(() => {
+            this.toggleSelectAll();
+          })
+
         Button('刷新')
           .width(80)
           .height(40)
@@ -201,12 +220,12 @@ struct SandboxFileManagementPage {
       }
       .width('100%')
       .padding({ left: 15, right: 15, top: 10, bottom: 10 })
-      .backgroundColor('#f0f0f0')
+      .backgroundColor($r('app.color.surface_subtle'))
 
       // 状态信息
       Text(this.statusMessage)
         .fontSize(14)
-        .fontColor('#666666')
+        .fontColor($r('app.color.text_secondary'))
         .width('100%')
         .padding({ left: 15, right: 15 })
 
@@ -218,7 +237,7 @@ struct SandboxFileManagementPage {
             .height(50)
           Text('加载中...')
             .fontSize(14)
-            .fontColor('#999999')
+            .fontColor($r('app.color.text_hint'))
         }
         .width('100%')
         .height(300)
@@ -231,7 +250,7 @@ struct SandboxFileManagementPage {
                 // 复选框
                 Checkbox({ name: file.name, group: 'fileSelect' })
                 .select(this.selectedFiles.includes(file.name))
-                .onChange(() => {
+                .onClick(() => {
                   this.toggleFileSelection(file.name);
                 })
 
@@ -245,7 +264,7 @@ struct SandboxFileManagementPage {
                   
                   Text(this.fileManager?.formatFileSize(file.size) || '')
                     .fontSize(12)
-                    .fontColor('#999999')
+                    .fontColor($r('app.color.text_hint'))
                 }
                 .layoutWeight(1)
                 .margin({ left: 10, right: 10 })
@@ -281,41 +300,32 @@ struct SandboxFileManagementPage {
       }
 
       // 底部操作栏
-      Row({ space: 15 }) {
-        Button('导入文件')
-          .width('45%')
-          .height(45)
-          .fontSize(16)
-          .backgroundColor('#007AFF')
-          .onClick(() => {
-            this.importFile();
-          })
-
-        if (this.selectedFiles.length > 0) {
-          Button(`批量导出 (${this.selectedFiles.length})`)
-            .width('45%')
-            .height(45)
-            .fontSize(16)
+      if (this.selectedFiles.length > 0) {
+        Row({ space: 6 }) {
+          Button(`导出(${this.selectedFiles.length})`)
+            .fontSize(13)
+            .layoutWeight(1)
+            .height(40)
             .backgroundColor('#34C759')
             .onClick(() => {
               this.batchExport();
             })
-          
-          Button(`批量删除 (${this.selectedFiles.length})`)
-            .width('45%')
-            .height(45)
-            .fontSize(16)
+
+          Button(`删除(${this.selectedFiles.length})`)
+            .fontSize(13)
+            .layoutWeight(1)
+            .height(40)
             .backgroundColor('#FF3B30')
             .onClick(() => {
               this.batchDelete();
             })
         }
+        .width('100%')
+        .padding({ left: 15, right: 15, top: 10, bottom: 15 })
       }
-      .width('100%')
-      .padding({ left: 15, right: 15, top: 10, bottom: 15 })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#ffffff')
+    .backgroundColor($r('app.color.surface'))
   }
 }

@@ -109,6 +109,7 @@ export class NovelCrawler {
     baseUrl: string,
     startPage: number,
     endPage: number,
+    outputFileName: string,
     onProgress?: (current: number, total: number, message: string) => void
   ): Promise<boolean> {
     try {
@@ -129,7 +130,7 @@ export class NovelCrawler {
         console.warn('长时任务启动失败，应用可能在后台被系统限制');
       }
 
-      await this.fileManager.setup();
+      await this.fileManager.setup(outputFileName);
 
       console.log(`开始爬取小说，共 ${totalPages} 页`);
 
@@ -169,7 +170,7 @@ export class NovelCrawler {
 
         // 添加延时避免请求过于频繁（除了最后一页）
         if (i < totalPages - 1) {
-          await new Promise<void>(resolve => setTimeout(resolve, 2000));
+          await new Promise<void>(resolve => setTimeout(resolve, 800));
         }
       }
 
@@ -194,20 +195,19 @@ export class NovelCrawler {
 
   /**
    * 保存已爬取的内容到设备
-   * @param outputFileName 输出文件名
    * @returns Promise<boolean> 是否保存成功
    */
-  async saveCrawledContent(outputFileName: string): Promise<boolean> {
+  async saveCrawledContent(): Promise<boolean> {
     try {
       // 检查沙箱文件是否有内容（不调 setup() 避免 TRUNC 清空已有数据）
-      const hasContent = await this.fileManager.hasContent();
+      const hasContent: boolean = await this.fileManager.hasContent();
       if (!hasContent) {
         console.warn('沙箱文件中没有可保存的内容');
         return false;
       }
 
-      // 直接保存到 Downloads 目录
-      const success = await this.fileManager.exportToDownload(outputFileName);
+      // 直接保存到 Downloads 目录，文件名与沙箱内一致
+      const success: boolean = await this.fileManager.exportToDownload();
       return success;
     } catch (error) {
       console.error('保存爬取内容失败:', error);

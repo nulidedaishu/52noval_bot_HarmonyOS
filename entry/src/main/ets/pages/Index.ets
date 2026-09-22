@@ -78,6 +78,7 @@ struct Index {
         this.baseUrl,
         startNum,
         endNum,
+        this.outputFileName,
         (current: number, total: number, message: string) => {
           this.progress = Math.round((current / total) * 100);
           this.statusMessage = message;
@@ -99,18 +100,10 @@ struct Index {
 
   // 保存文件到设备
   async saveToFile() {
-    if (!this.outputFileName) {
-      this.outputFileName = '小说.txt';
-    }
-
-    if (!this.outputFileName.endsWith('.txt')) {
-      this.outputFileName += '.txt';
-    }
-
     this.statusMessage = '正在保存文件...';
 
     try {
-      const success = await this.getNovelCrawler().saveCrawledContent(this.outputFileName);
+      const success: boolean = await this.getNovelCrawler().saveCrawledContent();
 
       if (success) {
         this.statusMessage = `文件已成功保存至 Downloads/你的应用包名/${this.outputFileName}`;
@@ -146,7 +139,7 @@ struct Index {
             if (this.baseUrl.length > 0) {
               Text('✕')
                 .fontSize(16)
-                .fontColor('#999')
+                .fontColor($r('app.color.text_hint'))
                 .width(30)
                 .textAlign(TextAlign.Center)
                 .onClick(() => {
@@ -172,7 +165,7 @@ struct Index {
             if (this.startPage.length > 0) {
               Text('✕')
                 .fontSize(16)
-                .fontColor('#999')
+                .fontColor($r('app.color.text_hint'))
                 .width(30)
                 .textAlign(TextAlign.Center)
                 .onClick(() => {
@@ -197,7 +190,7 @@ struct Index {
             if (this.endPage.length > 0) {
               Text('✕')
                 .fontSize(16)
-                .fontColor('#999')
+                .fontColor($r('app.color.text_hint'))
                 .width(30)
                 .textAlign(TextAlign.Center)
                 .onClick(() => {
@@ -222,7 +215,7 @@ struct Index {
             if (this.outputFileName.length > 0) {
               Text('✕')
                 .fontSize(16)
-                .fontColor('#999')
+                .fontColor($r('app.color.text_hint'))
                 .width(30)
                 .textAlign(TextAlign.Center)
                 .onClick(() => {
@@ -236,7 +229,7 @@ struct Index {
         // 状态显示
         Text(this.statusMessage)
           .fontSize(14)
-          .fontColor('#666666')
+          .fontColor($r('app.color.text_secondary'))
           .textAlign(TextAlign.Center)
           .width('90%')
 
@@ -282,6 +275,6 @@ struct Index {
       .width('100%')
       .padding({ left: 20, right: 20 })
     }
-    .backgroundColor('#f5f5f5')
+    .backgroundColor($r('app.color.page_background'))
   }
 }
